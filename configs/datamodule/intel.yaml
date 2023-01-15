@@ -1,0 +1,6 @@
+_target_: src.datamodules.intel_datamodule.INTELDataModule
+data_dir: ${paths.data_dir}
+batch_size: 128
+train_val_test_split: [13627, 1703, 1704]
+num_workers: 0
+pin_memory: False

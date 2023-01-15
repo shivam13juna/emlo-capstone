@@ -31,9 +31,10 @@ root = pyrootutils.setup_root(
 #
 # https://github.com/ashleve/pyrootutils
 # ------------------------------------------------------------------------------------ #
-
+import os
+os.environ['HYDRA_FULL_ERROR'] = '1'
 from typing import List, Optional, Tuple
-
+import sys
 import hydra
 import pytorch_lightning as pl
 from omegaconf import DictConfig
@@ -63,6 +64,7 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
         pl.seed_everything(cfg.seed, workers=True)
+    
 
     log.info(f"Instantiating datamodule <{cfg.datamodule._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.datamodule)
@@ -72,9 +74,12 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = utils.instantiate_callbacks(cfg.get("callbacks"))
+    print("This was callback list: ", callbacks, cfg.get("callbacks"))
 
     log.info("Instantiating loggers...")
     logger: List[LightningLoggerBase] = utils.instantiate_loggers(cfg.get("logger"))
+
+    print("This was logger list: ", logger, cfg.get("logger"))
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
@@ -92,6 +97,7 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         log.info("Logging hyperparameters!")
         utils.log_hyperparameters(object_dict)
 
+    
     if cfg.get("train"):
         log.info("Starting training!")
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))

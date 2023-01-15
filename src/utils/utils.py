@@ -2,10 +2,11 @@ import time
 import warnings
 from importlib.util import find_spec
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import hydra
 from omegaconf import DictConfig
+import pytorch_lightning as pl
 from pytorch_lightning import Callback
 from pytorch_lightning.loggers import LightningLoggerBase
 from pytorch_lightning.utilities import rank_zero_only
@@ -122,7 +123,9 @@ def instantiate_loggers(logger_cfg: DictConfig) -> List[LightningLoggerBase]:
         raise TypeError("Logger config must be a DictConfig!")
 
     for _, lg_conf in logger_cfg.items():
+        print("This is lg_confg: ", lg_conf)
         if isinstance(lg_conf, DictConfig) and "_target_" in lg_conf:
+            print("Instantiating logger <{}>".format(lg_conf._target_))
             log.info(f"Instantiating logger <{lg_conf._target_}>")
             logger.append(hydra.utils.instantiate(lg_conf))
 
@@ -168,8 +171,11 @@ def log_hyperparameters(object_dict: dict) -> None:
     hparams["tags"] = cfg.get("tags")
     hparams["ckpt_path"] = cfg.get("ckpt_path")
     hparams["seed"] = cfg.get("seed")
+    # hparams["metric"] = cfg.get("metric", None)
 
     # send hparams to all loggers
+    
+
     for logger in trainer.loggers:
         logger.log_hyperparams(hparams)
 
