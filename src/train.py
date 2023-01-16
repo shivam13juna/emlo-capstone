@@ -4,7 +4,6 @@ root = pyrootutils.setup_root(
     search_from=__file__,
     indicator=[".git", "pyproject.toml"],
     pythonpath=True,
-    dotenv=True,
 )
 
 # ------------------------------------------------------------------------------------ #
@@ -63,7 +62,7 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
 
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
-        pl.seed_everything(cfg.seed, workers=True)
+        pl.seed_everything(cfg.seed)
     
 
     log.info(f"Instantiating datamodule <{cfg.datamodule._target_}>")
@@ -93,9 +92,9 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         "trainer": trainer,
     }
 
-    if logger:
-        log.info("Logging hyperparameters!")
-        utils.log_hyperparameters(object_dict)
+    # if logger:
+    #     log.info("Logging hyperparameters!")
+    #     utils.log_hyperparameters(object_dict)
 
     
     if cfg.get("train"):

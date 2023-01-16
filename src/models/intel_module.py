@@ -1,5 +1,6 @@
 from typing import Any, List, Dict
-
+import os
+os.environ['HYDRA_FULL_ERROR'] = '1'
 import timm
 import torch
 import torchvision
@@ -58,7 +59,9 @@ class INTELLitModule(LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters()
+        self.save_hyperparameters(logger=True)
+        self.optimizer = optimizer
+        self.scheduler = scheduler
 
         self.n_labels = 6
         self.net = timm.create_model(model_name=model_name, pretrained=True, num_classes=self.n_labels)
@@ -78,7 +81,7 @@ class INTELLitModule(LightningModule):
 
         # for tracking best so far validation accuracy
         self.val_acc_best = MaxMetric()
-        self.writer = SummaryWriter()
+        # self.writer = SummaryWriter()
 
     def forward(self, x: torch.Tensor):
         return self.net(x)
@@ -89,6 +92,7 @@ class INTELLitModule(LightningModule):
         self.val_acc_best.reset()
         # print("What are hparams: ", self.hparams)
         # self.logger.log_hyperparams(self.hparams, {"hp/precision": 0, "hp/recall": 0, "hp/f1_score": 0})
+        # self.logger.log_hyperparams(self.hparams, {"hp/metric": 0})
 
     def model_step(self, batch: Any):
         x, y = batch
@@ -142,34 +146,35 @@ class INTELLitModule(LightningModule):
         self.log("val/acc_best", self.val_acc_best.compute(), prog_bar=True)
 
         # log confusion matrix
-        tb = self.writer  # noqa
+        # tb = self.writer  # noqa
 
-        outputs = torch.cat([tmp['preds'] for tmp in outs])
-        labels = torch.cat([tmp['targets'] for tmp in outs])
-        confusion = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=self.n_labels).to(outputs.get_device())
-        # Save confusion matrix to tensorboard with following labels ['buildings', 'forest', 'glacier', 'mountain', 'sea', 'street']
-        computed_confusion = confusion(outputs, labels)
-        tb.add_figure("val_confusion_matrix", plot_confusion_matrix(computed_confusion, ["buildings", "forest", "glacier", "mountain", "sea", "street"]), global_step=self.current_epoch)        
+        # outputs = torch.cat([tmp['preds'] for tmp in outs])
+        # labels = torch.cat([tmp['targets'] for tmp in outs])
+        # confusion = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=self.n_labels).to(outputs.get_device())
+        # # Save confusion matrix to tensorboard with following labels ['buildings', 'forest', 'glacier', 'mountain', 'sea', 'street']
+        # computed_confusion = confusion(outputs, labels)
+        # # tb.add_figure("val_confusion_matrix", plot_confusion_matrix(computed_confusion, ["buildings", "forest", "glacier", "mountain", "sea", "street"]), global_step=self.current_epoch)        
 
         
 
-        # also Log precision, recall and F1score
+        # # also Log precision, recall and F1score
 
-        precision = torchmetrics.Precision(task="multiclass", num_classes=self.n_labels).to(outputs.get_device())
-        value = precision(outputs, labels)
-        tb.add_scalar("val_precision", value, global_step=self.current_epoch)
-        self.log("hp/precision", value)
+        # precision = torchmetrics.Precision(task="multiclass", num_classes=self.n_labels).to(outputs.get_device())
+        # value = precision(outputs, labels)
+        # # tb.add_scalar("val_precision", value, global_step=self.current_epoch)
+        # # self.log("hp/precision", value)
+        # # self.log("hp/metric", value)
+        # # self.log("hp_metric", value)
 
+        # recall = torchmetrics.Recall(task="multiclass", num_classes=self.n_labels).to(outputs.get_device())
+        # value = recall(outputs, labels)
+        # # tb.add_scalar("val_recall", value, global_step=self.current_epoch)
+        # # self.log("hp/recall", value)
 
-        recall = torchmetrics.Recall(task="multiclass", num_classes=self.n_labels).to(outputs.get_device())
-        value = recall(outputs, labels)
-        tb.add_scalar("val_recall", value, global_step=self.current_epoch)
-        self.log("hp/recall", value)
-
-        f1_score = torchmetrics.classification.MulticlassF1Score(task="multiclass", num_classes=self.n_labels).to(outputs.get_device())
-        value = f1_score(outputs, labels)
-        tb.add_scalar("val_f1_score", value, global_step=self.current_epoch)
-        self.log("hp/f1_score", value)
+        # f1_score = torchmetrics.classification.MulticlassF1Score(task="multiclass", num_classes=self.n_labels).to(outputs.get_device())
+        # value = f1_score(outputs, labels)
+        # # tb.add_scalar("val_f1_score", value, global_step=self.current_epoch)
+        # # self.log("hp/f1_score", value)
 
 
 
@@ -194,9 +199,9 @@ class INTELLitModule(LightningModule):
         Examples:
             https://pytorch-lightning.readthedocs.io/en/latest/common/lightning_module.html#configure-optimizers
         """
-        optimizer = self.hparams.optimizer(params=self.parameters())
-        if self.hparams.scheduler is not None:
-            scheduler = self.hparams.scheduler(optimizer=optimizer)
+        optimizer = self.optimizer(params=self.parameters())
+        if self.scheduler is not None:
+            scheduler = self.scheduler(optimizer=optimizer)
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
